@@ -57,6 +57,7 @@ public final class PaperGameLocator implements GameLocatorService {
   private static final BlackboardMap.@NotNull Key<Path> PAPER_JAR = Blackboard.key("ignite.paper.jar", Path.class, Paths.get("./paper.jar"));
   private static final BlackboardMap.@NotNull Key<String> PAPER_TARGET = Blackboard.key("ignite.paper.target", String.class, "io.papermc.paperclip.Paperclip");
   private static final BlackboardMap.@NotNull Key<String> PAPER_VERSION = Blackboard.key("ignite.paper.version", String.class, "1.20.4");
+  private static final BlackboardMap.@NotNull Key<String> PAPER_BRANCH = Blackboard.key("ignite.paper.branch", String.class, "paper");
 
   private PaperGameProvider provider;
 
@@ -90,6 +91,7 @@ public final class PaperGameLocator implements GameLocatorService {
     // Populate the blackboard.
     Blackboard.compute(PaperGameLocator.PAPER_JAR, () -> Paths.get(System.getProperty(PaperGameLocator.PAPER_JAR.name())));
     Blackboard.compute(PaperGameLocator.PAPER_TARGET, () -> System.getProperty(PaperGameLocator.PAPER_TARGET.name()));
+    Blackboard.compute(PaperGameLocator.PAPER_BRANCH, () -> System.getProperty(PaperGameLocator.PAPER_BRANCH.name()));
     Blackboard.compute(PaperGameLocator.PAPER_VERSION, () -> System.getProperty(PaperGameLocator.PAPER_VERSION.name()));
 
     // Add the transformer to replace the system exits.
@@ -172,14 +174,14 @@ public final class PaperGameLocator implements GameLocatorService {
             final JsonObject versionObject = IgniteConstants.GSON.fromJson(new InputStreamReader(inputStream), JsonObject.class);
 
             final String version = versionObject.getAsJsonPrimitive("id").getAsString();
-            game = String.format("./versions/%s/paper-%s.jar", version, version);
+            game = String.format("./versions/%s/%s-%s.jar", version,Blackboard.raw(PaperGameLocator.PAPER_BRANCH), version);
             Logger.trace("Located paper jar from version.json: {}", game);
           }
         }
 
         if(game == null) {
           final String version = Blackboard.raw(PaperGameLocator.PAPER_VERSION);
-          game = String.format("./versions/%s/paper-%s.jar", version, version);
+          game = String.format("./versions/%s/%s-%s.jar", version, Blackboard.raw(PaperGameLocator.PAPER_BRANCH),version);
           Logger.trace("Located paper jar from command argument: {}", game);
         }
       }
