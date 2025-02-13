@@ -29,8 +29,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
-import java.util.jar.Manifest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
@@ -180,7 +178,7 @@ public final class EmberMixinService implements IMixinService, IClassProvider, I
 
   @Override
   public MixinEnvironment.CompatibilityLevel getMaxCompatibilityLevel() {
-    return MixinEnvironment.CompatibilityLevel.JAVA_17;
+    return MixinEnvironment.CompatibilityLevel.JAVA_22;
   }
   //</editor-fold>
 
@@ -214,6 +212,11 @@ public final class EmberMixinService implements IMixinService, IClassProvider, I
 
   @Override
   public @NotNull ClassNode getClassNode(final @NotNull String name, final boolean runTransformers) throws ClassNotFoundException, IOException {
+    return this.getClassNode(name, runTransformers, 0);
+  }
+
+  @Override
+  public @NotNull ClassNode getClassNode(final @NotNull String name, final boolean runTransformers, final int readerFlags) throws ClassNotFoundException, IOException {
     if(!runTransformers) throw new IllegalStateException("ClassNodes must always be provided transformed!");
 
     final Ember ember = Ember.instance();
@@ -226,10 +229,10 @@ public final class EmberMixinService implements IMixinService, IClassProvider, I
     final String canonicalName = name.replace('/', '.');
     final String internalName = name.replace('.', '/');
 
-    final @Nullable Map.Entry<byte[], Manifest> entry = loader.classData(canonicalName, TransformPhase.MIXIN);
+    final @Nullable EmberClassLoader.ClassData entry = loader.classData(canonicalName, TransformPhase.MIXIN);
     if(entry == null) throw new ClassNotFoundException(canonicalName);
 
-    return mixinTransformer.classNode(canonicalName, internalName, entry.getKey());
+    return mixinTransformer.classNode(canonicalName, internalName, entry.data(), readerFlags);
   }
   //</editor-fold>
 

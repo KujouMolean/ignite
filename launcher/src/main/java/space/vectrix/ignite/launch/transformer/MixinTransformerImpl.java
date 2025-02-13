@@ -25,6 +25,7 @@
 package space.vectrix.ignite.launch.transformer;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
@@ -82,14 +83,14 @@ public final class MixinTransformerImpl implements TransformerService {
   }
 
   @Override
-  public boolean transform(final @NotNull Type type, final @NotNull ClassNode node, final @NotNull TransformPhase phase) throws Throwable {
+  public @Nullable ClassNode transform(final @NotNull Type type, final @NotNull ClassNode node, final @NotNull TransformPhase phase) throws Throwable {
     // Generate the class if it is synthetic through mixin.
     if(this.shouldGenerateClass(type)) {
-      return this.generateClass(type, node);
+      return this.generateClass(type, node) ? node : null;
     }
 
     // Transform the class through mixin.
-    return this.transformer.transformClass(MixinEnvironment.getCurrentEnvironment(), type.getClassName(), node);
+    return this.transformer.transformClass(MixinEnvironment.getCurrentEnvironment(), type.getClassName(), node) ? node : null;
   }
 
   /**
@@ -99,15 +100,16 @@ public final class MixinTransformerImpl implements TransformerService {
    * @param canonicalName the canonical name
    * @param internalName the internal name
    * @param input the input class bytes
+   * @param readerFlags the reader flags
    * @return the class node
    * @throws ClassNotFoundException if the class could not be found
    * @since 1.0.0
    */
-  public @NotNull ClassNode classNode(final @NotNull String canonicalName, final @NotNull String internalName, final byte@NotNull [] input) throws ClassNotFoundException {
+  public @NotNull ClassNode classNode(final @NotNull String canonicalName, final @NotNull String internalName, final byte@NotNull [] input, final int readerFlags) throws ClassNotFoundException {
     if(input.length != 0) {
       final ClassNode node = new ClassNode(IgniteConstants.ASM_VERSION);
       final ClassReader reader = new MixinClassReader(input, canonicalName);
-      reader.accept(node, 0);
+      reader.accept(node, readerFlags);
       return node;
     }
 

@@ -83,26 +83,12 @@ public final class AccessTransformerImpl implements TransformerService {
   }
 
   @Override
-  public boolean transform(final @NotNull Type type, final @NotNull ClassNode node, final @NotNull TransformPhase phase) throws Throwable {
-    final ClassNode widened = new ClassNode(IgniteConstants.ASM_VERSION);
-    widened.accept(node);
+  public @NotNull ClassNode transform(final @NotNull Type type, final @NotNull ClassNode node, final @NotNull TransformPhase phase) throws Throwable {
+    final ClassNode writer = new ClassNode(IgniteConstants.ASM_VERSION);
+    final ClassVisitor visitor = AccessWidenerClassVisitor.createClassVisitor(IgniteConstants.ASM_VERSION, writer, this.widener);
 
-    final ClassVisitor visitor = AccessWidenerClassVisitor.createClassVisitor(IgniteConstants.ASM_VERSION, node, this.widener);
+    node.accept(visitor);
 
-    node.visibleAnnotations = null;
-    node.invisibleAnnotations = null;
-    node.visibleTypeAnnotations = null;
-    node.invisibleTypeAnnotations = null;
-    node.attrs = null;
-    node.nestMembers = null;
-    node.permittedSubclasses = null;
-    node.recordComponents = null;
-    node.innerClasses.clear();
-    node.fields.clear();
-    node.methods.clear();
-    node.interfaces.clear();
-
-    widened.accept(visitor);
-    return true;
+    return writer;
   }
 }

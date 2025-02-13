@@ -24,53 +24,61 @@
  */
 package space.vectrix.ignite.game;
 
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.nio.file.Paths;
+import java.util.jar.JarFile;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
-import org.tinylog.Logger;
 import space.vectrix.ignite.Blackboard;
 import space.vectrix.ignite.IgniteBootstrap;
 
 /**
- * Provides a general game locator.
+ * Provides a game locator for Velocity.
  *
  * @author vectrix
- * @since 1.0.0
+ * @since 1.1.0
  */
-public final class DummyGameLocator implements GameLocatorService {
-  private DummyGameProvider provider;
+public final class VelocityGameLocator implements GameLocatorService {
+  private VelocityGameProvider provider;
 
   @Override
   public @NotNull String id() {
-    return "dummy";
+    return "velocity";
   }
 
   @Override
   public @NotNull String name() {
-    return "Dummy";
+    return "Velocity";
   }
 
   @Override
   public int priority() {
-    return Integer.MAX_VALUE;
+    return 50;
   }
 
   @Override
   public boolean shouldApply() {
-    return true;
+    final Path path = Blackboard.get(Blackboard.GAME_JAR).orElseGet(() -> Paths.get("./velocity.jar"));
+    try(final JarFile jarFile = new JarFile(path.toFile())) {
+      return jarFile.getJarEntry("default-velocity.toml") != null;
+    } catch(final IOException exception) {
+      return false;
+    }
   }
 
   @Override
   public void apply(final @NotNull IgniteBootstrap bootstrap) throws Throwable {
-    Logger.warn("Using the dummy game provider means that all the jars found in the game libraries directory");
-    Logger.warn("will be loaded into the classpath. If this causes an unexpected problem, please delete the");
-    Logger.warn("libraries directory and try launch again.");
+    Blackboard.compute(Blackboard.GAME_TARGET, () -> Blackboard.get(Blackboard.GAME_TARGET).orElse("com.velocitypowered.proxy.Velocity"));
 
+    // Create the game provider.
     if(this.provider == null) {
-      this.provider = new DummyGameProvider();
+      this.provider = new VelocityGameProvider();
+    }
+
+    // Locate the game jar.
+    if(!Blackboard.get(Blackboard.GAME_JAR).isPresent()) {
+      Blackboard.put(Blackboard.GAME_JAR, this.provider.gamePath());
     }
   }
 
@@ -79,32 +87,18 @@ public final class DummyGameLocator implements GameLocatorService {
     return this.provider;
   }
 
-  /* package */ static final class DummyGameProvider implements GameProvider {
-    /* package */ DummyGameProvider() {
+  /* package */ static final class VelocityGameProvider implements GameProvider {
+    /* package */ VelocityGameProvider() {
     }
 
     @Override
     public @NotNull Stream<Path> gameLibraries() {
-      final Path libraryPath = Blackboard.raw(Blackboard.GAME_LIBRARIES);
-      final List<Path> libraries;
-
-      try(final Stream<Path> stream = Files.walk(libraryPath)) {
-        // We must .collect() to a list and re-stream() as Stream is AutoClosable, and thus
-        // will be closed as soon as we exit the try-catch block.
-        libraries = stream
-          .filter(Files::isRegularFile)
-          .filter(path -> path.toString().endsWith(".jar"))
-          .collect(Collectors.toList());
-      } catch(final Throwable throwable) {
-        return Stream.empty();
-      }
-
-      return libraries.stream();
+      return Stream.empty();
     }
 
     @Override
     public @NotNull Path gamePath() {
-      return Blackboard.raw(Blackboard.GAME_JAR);
+      return Blackboard.get(Blackboard.GAME_JAR).orElseGet(() -> Paths.get("./velocity.jar"));
     }
   }
 }
